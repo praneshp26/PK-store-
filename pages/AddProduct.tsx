@@ -16,28 +16,37 @@ export const AddProduct: React.FC = () => {
     category: 'Electronics',
     deliveryDays: '1'
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const newProduct: Product = {
-      id: Date.now().toString(),
-      title: formData.title,
-      price: parseFloat(formData.price),
-      description: formData.description,
-      image: `https://picsum.photos/400/400?random=${Date.now()}`,
-      deliveryDays: parseInt(formData.deliveryDays) as 1 | 2,
-      category: formData.category,
-      rating: 5.0, // New products start with 5 stars
-      sellerName: user?.name || 'Anonymous Seller'
-    };
+    setError('');
+    setLoading(true);
 
-    addProduct(newProduct);
-    navigate('/');
+    try {
+      const newProduct: Omit<Product, 'id'> = {
+        title: formData.title,
+        price: parseFloat(formData.price),
+        description: formData.description,
+        image: `https://picsum.photos/400/400?random=${Date.now()}`,
+        deliveryDays: parseInt(formData.deliveryDays) as 1 | 2,
+        category: formData.category,
+        rating: 5.0, // New products start with 5 stars
+        sellerName: user?.name || 'Anonymous Seller'
+      };
+
+      await addProduct(newProduct);
+      navigate('/');
+    } catch (err) {
+      console.error('Error adding product:', err);
+      setError('Failed to add product. Please try again.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,6 +58,11 @@ export const AddProduct: React.FC = () => {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700">Product Title</label>
             <input
@@ -110,11 +124,10 @@ export const AddProduct: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, deliveryDays: '1' })}
-                className={`p-4 rounded-xl border-2 text-center transition-all ${
-                  formData.deliveryDays === '1' 
-                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className={`p-4 rounded-xl border-2 text-center transition-all ${formData.deliveryDays === '1'
+                  ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                  : 'border-gray-200 hover:border-gray-300'
+                  }`}
               >
                 <div className="font-bold">Next Day</div>
                 <div className="text-xs opacity-75">Top priority</div>
@@ -122,11 +135,10 @@ export const AddProduct: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, deliveryDays: '2' })}
-                className={`p-4 rounded-xl border-2 text-center transition-all ${
-                  formData.deliveryDays === '2' 
-                    ? 'border-blue-500 bg-blue-50 text-blue-700' 
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
+                className={`p-4 rounded-xl border-2 text-center transition-all ${formData.deliveryDays === '2'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  : 'border-gray-200 hover:border-gray-300'
+                  }`}
               >
                 <div className="font-bold">2 Days</div>
                 <div className="text-xs opacity-75">Standard Fast</div>
@@ -139,7 +151,9 @@ export const AddProduct: React.FC = () => {
             <p className="text-sm text-gray-500">Image upload is simulated for this demo.</p>
           </div>
 
-          <Button type="submit" fullWidth size="lg">List Product</Button>
+          <Button type="submit" fullWidth size="lg" disabled={loading}>
+            {loading ? 'Adding Product...' : 'List Product'}
+          </Button>
         </form>
       </div>
     </div>
