@@ -1,114 +1,95 @@
 import React, { useState } from 'react';
-import { useStore } from '../context/StoreContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/Button';
-import { Package, Lock, Mail, Phone, User } from 'lucide-react';
+import { Lock, Mail, AlertCircle } from 'lucide-react';
 
 export const Login: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({
-    name: '',
-    identifier: '', // Email or Phone
-    password: ''
-  });
-  
-  const { login } = useStore();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login logic
-    const email = formData.identifier.includes('@') 
-      ? formData.identifier 
-      : `${formData.identifier}@example.com`; // Fallback for demo
-      
-    login(isLogin ? "Demo User" : formData.name, email);
-    navigate(-1); // Go back
-  };
+    setError('');
+    setLoading(true);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    try {
+      await login(email, password);
+      navigate('/');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      switch (err.code) {
+        case 'auth/user-not-found':
+        case 'auth/invalid-credential':
+          setError('Invalid email or password');
+          break;
+        case 'auth/wrong-password':
+          setError('Incorrect password');
+          break;
+        case 'auth/invalid-email':
+          setError('Invalid email address');
+          break;
+        case 'auth/too-many-requests':
+          setError('Too many attempts. Please try again later.');
+          break;
+        default:
+          setError('Failed to log in. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-8 md:p-10 rounded-2xl shadow-xl border border-gray-100">
-        
-        {/* Header */}
+
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4 font-black text-2xl">
             PK
           </div>
           <h2 className="text-3xl font-extrabold text-gray-900">
-            {isLogin ? 'Welcome back' : 'Create an account'}
+            Welcome back
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            {isLogin 
-              ? 'Enter your details to access your account.' 
-              : 'Join PK Store for the fastest deliveries.'}
+            Enter your details to access your account.
           </p>
         </div>
 
-        {/* Tabs */}
-        <div className="flex p-1 space-x-1 bg-gray-100/80 rounded-xl">
-          <button
-            className={`w-full py-2.5 text-sm font-medium leading-5 rounded-lg transition-all duration-200 ${
-              isLogin 
-                ? 'bg-white text-blue-700 shadow' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-            onClick={() => setIsLogin(true)}
-          >
-            Sign In
-          </button>
-          <button
-            className={`w-full py-2.5 text-sm font-medium leading-5 rounded-lg transition-all duration-200 ${
-              !isLogin 
-                ? 'bg-white text-blue-700 shadow' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-            onClick={() => setIsLogin(false)}
-          >
-            Sign Up
-          </button>
-        </div>
-
-        <form className="mt-8 space-y-5" onSubmit={handleLogin}>
-          
-          {!isLogin && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  name="name"
-                  type="text"
-                  required={!isLogin}
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
-                  placeholder="John Doe"
-                />
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-red-500" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
               </div>
             </div>
-          )}
+          </div>
+        )}
+
+        <form className="mt-8 space-y-5" onSubmit={handleLogin}>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email or Phone Number</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Mail className="h-5 w-5 text-gray-400" />
               </div>
               <input
-                name="identifier"
-                type="text"
+                name="email"
+                type="email"
                 required
-                value={formData.identifier}
-                onChange={handleChange}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
-                placeholder="user@example.com or 9876543210"
+                placeholder="user@example.com"
               />
             </div>
           </div>
@@ -123,8 +104,8 @@ export const Login: React.FC = () => {
                 name="password"
                 type="password"
                 required
-                value={formData.password}
-                onChange={handleChange}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all"
                 placeholder="••••••••"
               />
@@ -144,40 +125,25 @@ export const Login: React.FC = () => {
               </label>
             </div>
 
-            {isLogin && (
-              <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
-                  Forgot password?
-                </a>
-              </div>
-            )}
+            <div className="text-sm">
+              <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+                Forgot password?
+              </a>
+            </div>
           </div>
 
-          <Button type="submit" fullWidth size="lg">
-            {isLogin ? 'Sign In' : 'Create Account'}
+          <Button type="submit" fullWidth size="lg" disabled={loading}>
+            {loading ? 'Logging in...' : 'Sign In'}
           </Button>
         </form>
 
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">Or continue with</span>
-            </div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <button className="w-full inline-flex justify-center py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-              <span className="sr-only">Sign in with Google</span>
-              Google
-            </button>
-            <button className="w-full inline-flex justify-center py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
-              <span className="sr-only">Sign in with Facebook</span>
-              Facebook
-            </button>
-          </div>
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            Don't have an account?{' '}
+            <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500">
+              Sign Up
+            </Link>
+          </p>
         </div>
       </div>
     </div>
