@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
+import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
@@ -14,10 +14,26 @@ const firebaseConfig = {
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
+// Debug: Check if config is loaded properly
+if (!firebaseConfig.projectId) {
+    console.error('Firebase config missing! Check .env.local file.');
+    console.error('Expected VITE_FIREBASE_PROJECT_ID to be set.');
+    console.error('Current config:', firebaseConfig);
+}
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+
+// Initialize Analytics only if supported (avoid errors in dev/SSR)
+let analytics = null;
+isSupported().then((supported) => {
+    if (supported) {
+        analytics = getAnalytics(app);
+    }
+}).catch(console.error);
+
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 export { app, analytics, auth, db };
+
